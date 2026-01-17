@@ -1,7 +1,7 @@
-# MCP Builder Desktop (MVP Spec)
+# MCP Builder (MVP Spec)
 
-A desktop, dashboard-style tool for visually creating **MCP servers from REST APIs**, exporting a ready-to-run MCP implementation compatible with Claude.  
-Built as a **Tauri desktop app**, optimized for fast scanning, editing, and iteration — not step-by-step wizards.
+A web-based, dashboard-style tool for visually creating **MCP servers from REST APIs**, exporting a ready-to-run MCP implementation compatible with Claude.  
+Built as a **React web application**, optimized for fast scanning, editing, and iteration — not step-by-step wizards.
 
 ---
 
@@ -314,26 +314,26 @@ mcp-server/
 
 ---
 
-## 9. Desktop Architecture (Tauri)
+## 9. Application Architecture
 
 ### 9.1 Frontend
-- React (or Svelte)
-- Local state store
+- React + TypeScript
+- Vite for build tooling
+- Local state store (Zustand)
 - JSON Schema editor component
 - Drawer-based editing UX
 
-### 9.2 Backend (Rust)
-- File system access
-- Zip export
-- OpenAPI parsing (or delegated to frontend)
-- OS keychain integration for secrets
+### 9.2 Storage
+- Browser localStorage for projects and state
+- IndexedDB for larger data (future)
+- localStorage for secret storage (development only - NOT secure for production)
 
 ---
 
 ## 10. Project Storage
 
-Single project file:
-my-project.mcpb.json
+Single project file (JSON):
+`my-project.mcpb.json`
 
 Contains:
 - APIs
@@ -342,7 +342,12 @@ Contains:
 - Auth metadata (no secrets)
 - UI state
 
-Secrets stored via OS keychain only.
+Secrets stored in localStorage (development) or secure storage (production).
+
+Note: For web deployment, project files can be:
+- Exported/imported as JSON files
+- Stored in browser localStorage
+- Synced to cloud storage (future enhancement)
 
 ---
 

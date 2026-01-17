@@ -48,10 +48,7 @@ export function ExportManager() {
       mcpServers: {
         [projectName]: {
           command: "node",
-          args: ["/path/to/exported-server/dist/index.js"],
-          env: {
-            "API_KEY": "your-api-key"
-          }
+          args: ["/absolute/path/to/exported-server/dist/index.js"]
         }
       }
     };
@@ -109,9 +106,39 @@ export function ExportManager() {
       </div>
 
       <div className="bg-white rounded-lg shadow p-6">
-        <h3 className="text-lg font-semibold mb-4">Claude Desktop Configuration</h3>
-        <p className="mb-4 text-gray-600">
-          Add this configuration to your Claude Desktop config file to use your new server.
+        <h3 className="text-lg font-semibold mb-4">Setup Instructions</h3>
+        
+        <div className="space-y-4 mb-6">
+          <div className="bg-blue-50 border border-blue-200 rounded p-4">
+            <h4 className="font-semibold text-blue-900 mb-2">1. Extract the Downloaded Zip</h4>
+            <p className="text-blue-800 text-sm">Unzip the downloaded file to a permanent location on your computer.</p>
+          </div>
+          
+          <div className="bg-green-50 border border-green-200 rounded p-4">
+            <h4 className="font-semibold text-green-900 mb-2">2. Configure Environment Variables</h4>
+            <p className="text-green-800 text-sm mb-2">
+              Copy <code className="bg-white px-1 rounded">.env.example</code> to <code className="bg-white px-1 rounded">.env</code> and fill in your credentials:
+            </p>
+            <pre className="bg-white p-2 rounded text-xs text-green-900 overflow-x-auto">
+              cp .env.example .env{'\n'}# Then edit .env with your actual API keys/tokens
+            </pre>
+            <p className="text-green-800 text-sm mt-2">
+              <strong>Important:</strong> Never commit the .env file to version control!
+            </p>
+          </div>
+          
+          <div className="bg-purple-50 border border-purple-200 rounded p-4">
+            <h4 className="font-semibold text-purple-900 mb-2">3. Install Dependencies & Build</h4>
+            <pre className="bg-white p-2 rounded text-xs text-purple-900 overflow-x-auto">
+              npm install{'\n'}npm run build
+            </pre>
+          </div>
+        </div>
+        
+        <h4 className="font-semibold mb-2">4. Add to Claude Desktop Config</h4>
+        <p className="mb-4 text-gray-600 text-sm">
+          Add this to your <code className="bg-gray-100 px-1 rounded">claude_desktop_config.json</code>. 
+          Replace the path with the absolute path to your extracted server.
         </p>
         
         <div className="relative">
@@ -125,6 +152,13 @@ export function ExportManager() {
           >
             {copied ? <Check size={16} className="text-green-600" /> : <Copy size={16} />}
           </button>
+        </div>
+        
+        <div className="mt-4 bg-yellow-50 border border-yellow-200 rounded p-3">
+          <p className="text-yellow-800 text-sm">
+            <strong>Note:</strong> Do NOT include environment variables in the Claude config. 
+            Credentials are loaded from the .env file automatically.
+          </p>
         </div>
       </div>
     </div>

@@ -1,15 +1,14 @@
-# MCP Builder Desktop — Build Checklist for AI Coding Agent
+# MCP Builder — Build Checklist for AI Coding Agent
 
 This checklist is ordered so an AI coding agent can **incrementally build a working MVP**, with clear stopping points and validation criteria.  
-Target: **Tauri desktop app** that visually builds and exports REST-based MCP servers.
+Target: **Web application** that visually builds and exports REST-based MCP servers.
 
 ---
 
 ## 0. Global Constraints (Read First)
 
-- Desktop app: **Tauri**
-- Frontend: **React + TypeScript** (or Svelte if preferred)
-- Backend: **Rust (Tauri core)**
+- Application: **Web-based (React + Vite)**
+- Frontend: **React + TypeScript**
 - MCP runtime target: **Node.js + TypeScript**
 - Scope: REST APIs only
 - No in-app testing or chat UI
@@ -21,14 +20,14 @@ Target: **Tauri desktop app** that visually builds and exports REST-based MCP se
 
 ### 1.1 Repository Setup
 - [x] Create monorepo or single repo with:
-  - [x] `/app` (Tauri frontend)
+  - [x] `/app` (Web frontend with Vite + React)
   - [x] `/export-templates` (MCP server template)
-- [x] Initialize Tauri project
+- [x] Initialize Vite project with React
 - [x] Configure hot reload for frontend
 - [x] Add basic app shell layout
 
 **Done when**
-- App launches as a desktop window
+- App launches in browser
 - Static UI renders without errors
 
 ---
@@ -171,7 +170,7 @@ Tabs:
 - [x] Inherit OAuth per tool
 
 ### 7.3 Secret Storage
-- [x] Integrate OS keychain via Tauri plugin
+- [x] Implement secret storage abstraction (localStorage for web)
 - [x] Reference secrets by ID only
 
 **Done when**
