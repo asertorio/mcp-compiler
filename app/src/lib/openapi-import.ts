@@ -9,6 +9,36 @@ export interface ImportResult {
   authSchemes: AuthScheme[];
 }
 
+/**
+ * Recursively removes vendor extensions (properties starting with 'x-') from objects.
+ * OpenAPI allows vendor extensions like x-stoplight, x-logo, etc. which are not
+ * relevant for MCP tool generation and should be stripped from schemas.
+ */
+function stripVendorExtensions(obj: any): any {
+  if (obj === null || obj === undefined) {
+    return obj;
+  }
+
+  if (Array.isArray(obj)) {
+    return obj.map(item => stripVendorExtensions(item));
+  }
+
+  if (typeof obj === 'object') {
+    const result: Record<string, any> = {};
+    for (const [key, value] of Object.entries(obj)) {
+      // Skip any property that starts with 'x-' (vendor extension)
+      if (key.startsWith('x-')) {
+        continue;
+      }
+      result[key] = stripVendorExtensions(value);
+    }
+    return result;
+  }
+
+  // Primitives (string, number, boolean) pass through unchanged
+  return obj;
+}
+
 export async function importOpenApi(source: string | File): Promise<ImportResult> {
   let spec: any;
 
@@ -85,17 +115,54 @@ export async function importOpenApi(source: string | File): Promise<ImportResult
             // Extract request schema (simplified)
             let requestSchema: any = {};
             
-            // First, extract path and query parameters
+            // First, extract path parameters from the URL path itself
+            const pathParamsFromUrl = (path.match(/\{([^}]+)\}/g) || []).map(p => p.slice(1, -1));
+            
+            // Then extract path and query parameters from the operation
             const paramProperties: any = {};
             const paramRequired: string[] = [];
             
+            // Add path parameters from URL (always required)
+            pathParamsFromUrl.forEach(paramName => {
+              paramProperties[paramName] = {
+                type: 'string',
+                description: `Path parameter: ${paramName}`
+              };
+              paramRequired.push(paramName);
+            });
+            
+            // Now process parameters from the spec (may override defaults above)
             if (operation.parameters) {
               operation.parameters.forEach((param: any) => {
                 if (param.in === 'query' || param.in === 'path') {
-                  paramProperties[param.name] = param.schema || { type: 'string' };
-                  paramProperties[param.name].description = param.description;
-                  if (param.required) {
+                  // Use the schema from the spec, or default to string
+                  // Strip vendor extensions from parameter schemas
+                  paramProperties[param.name] = stripVendorExtensions(param.schema) || { type: 'string' };
+                  // Preserve or add description
+                  if (param.description) {
+                    paramProperties[param.name].description = param.description;
+                  }
+                  // Add to required if specified (path params already added above)
+                  if (param.required && !paramRequired.includes(param.name)) {
                     paramRequired.push(param.name);
+                  }
+                }
+              });
+            }
+            
+            // Also check for parameters at the path level (not operation level)
+            if (pathItem.parameters) {
+              pathItem.parameters.forEach((param: any) => {
+                if (param.in === 'query' || param.in === 'path') {
+                  if (!paramProperties[param.name]) {
+                    // Strip vendor extensions from parameter schemas
+                    paramProperties[param.name] = stripVendorExtensions(param.schema) || { type: 'string' };
+                    if (param.description) {
+                      paramProperties[param.name].description = param.description;
+                    }
+                    if (param.required && !paramRequired.includes(param.name)) {
+                      paramRequired.push(param.name);
+                    }
                   }
                 }
               });
@@ -103,7 +170,8 @@ export async function importOpenApi(source: string | File): Promise<ImportResult
             
             // Then, check if there's a request body
             if (operation.requestBody?.content?.['application/json']?.schema) {
-              const bodySchema = operation.requestBody.content['application/json'].schema;
+              // Strip vendor extensions from body schema
+              const bodySchema = stripVendorExtensions(operation.requestBody.content['application/json'].schema);
               
               // If we have path/query params, merge them with the body schema
               if (Object.keys(paramProperties).length > 0) {
@@ -128,7 +196,14 @@ export async function importOpenApi(source: string | File): Promise<ImportResult
               requestSchema = {
                 type: 'object',
                 properties: paramProperties,
-                required: paramRequired.length > 0 ? paramRequired : undefined
+                required: paramRequired
+              };
+            } else {
+              // No body and no params - empty schema
+              requestSchema = {
+                type: 'object',
+                properties: {},
+                required: []
               };
             }
 
@@ -136,7 +211,9 @@ export async function importOpenApi(source: string | File): Promise<ImportResult
             let responseSchema: any = undefined;
             const successCode = Object.keys(operation.responses || {}).find(code => code.startsWith('2'));
             if (successCode) {
-              responseSchema = operation.responses[successCode]?.content?.['application/json']?.schema;
+              const rawResponseSchema = operation.responses[successCode]?.content?.['application/json']?.schema;
+              // Strip vendor extensions from response schema
+              responseSchema = rawResponseSchema ? stripVendorExtensions(rawResponseSchema) : undefined;
             }
 
             const tool: Tool = {

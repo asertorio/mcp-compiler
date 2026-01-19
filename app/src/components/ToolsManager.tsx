@@ -3,7 +3,8 @@ import { useProjectStore } from '../store/projectStore';
 import { Tool, HttpMethod, API } from '../types';
 import { Drawer } from './Drawer';
 import { SchemaEditor } from './SchemaEditor';
-import { Search, Filter, Edit2, Trash2, Check, X as XIcon, Settings, Lock, FileText, Globe } from 'lucide-react';
+import { SchemaFieldsEditor } from './SchemaFieldsEditor';
+import { Search, Filter, Edit2, Trash2, Check, X as XIcon, Settings, Lock, FileText, Globe, ChevronDown, ChevronRight } from 'lucide-react';
 import { Tooltip } from './common/Tooltip';
 import { SearchInput } from './common/SearchInput';
 import { EmptyState } from './common/EmptyState';
@@ -18,6 +19,7 @@ export function ToolsManager() {
   const [selectedToolId, setSelectedToolId] = useState<string | null>(null);
   const [isDrawerOpen, setIsDrawerOpen] = useState(false);
   const [activeTab, setActiveTab] = useState<'basics' | 'request' | 'response' | 'http' | 'auth'>('basics');
+  const [showRawJson, setShowRawJson] = useState(false);
 
   if (!project) return <div>No project loaded</div>;
 
@@ -354,18 +356,54 @@ export function ToolsManager() {
               {activeTab === 'request' && (
                 <div style={{ display: 'flex', flexDirection: 'column', gap: '15px' }}>
                     <div className="info-box" style={{ padding: '10px', background: 'rgba(97, 175, 254, 0.1)', border: '1px solid rgba(97, 175, 254, 0.3)', borderRadius: '4px', fontSize: '0.9rem', color: '#61affe' }}>
-                        This schema defines the input parameters for the MCP tool. It matches the JSON Schema format.
+                        Define the input parameters for this tool. Add descriptions and validation rules to help AI understand how to use each parameter.
                     </div>
+                    
+                    {/* Visual Property Editor */}
                     <div className="form-group">
-                        <label style={{ display: 'block', marginBottom: '5px', color: '#ccc' }}>Request Schema (JSON)</label>
-                        <SchemaEditor 
-                            key={`${selectedTool.id}-req`}
-                            value={selectedTool.requestSchema || {}}
+                        <label style={{ display: 'block', marginBottom: '8px', color: '#ccc', fontSize: '0.95rem', fontWeight: 500 }}>
+                          Input Properties
+                        </label>
+                        <SchemaFieldsEditor 
+                            key={`${selectedTool.id}-fields`}
+                            value={selectedTool.requestSchema || { type: 'object', properties: {}, required: [] }}
                             onChange={(val) => updateTool(selectedTool.id, { requestSchema: val })}
+                            toolPath={selectedTool.path}
+                            toolMethod={selectedTool.method}
                         />
-                         <p style={{fontSize: '0.8rem', color: '#666', marginTop: '5px'}}>
-                            Edit strictly valid JSON Schema.
-                        </p>
+                    </div>
+
+                    {/* Raw JSON Editor (Collapsible) */}
+                    <div className="form-group">
+                        <div 
+                          style={{ 
+                            display: 'flex', 
+                            alignItems: 'center', 
+                            gap: '8px', 
+                            cursor: 'pointer',
+                            padding: '8px 0',
+                            color: '#aaa'
+                          }}
+                          onClick={() => setShowRawJson(!showRawJson)}
+                        >
+                          {showRawJson ? <ChevronDown size={18} /> : <ChevronRight size={18} />}
+                          <label style={{ cursor: 'pointer', fontSize: '0.9rem' }}>
+                            Raw JSON Schema
+                          </label>
+                        </div>
+                        
+                        {showRawJson && (
+                          <div style={{ marginTop: '8px' }}>
+                            <SchemaEditor 
+                                key={`${selectedTool.id}-req`}
+                                value={selectedTool.requestSchema || {}}
+                                onChange={(val) => updateTool(selectedTool.id, { requestSchema: val })}
+                            />
+                            <p style={{fontSize: '0.8rem', color: '#666', marginTop: '5px'}}>
+                                Advanced: Edit the raw JSON Schema directly. Changes sync with the visual editor above.
+                            </p>
+                          </div>
+                        )}
                     </div>
                 </div>
               )}
