@@ -1,0 +1,5 @@
+# Exclude everything at the root level except the app folder
+/*
+!/app/
+!/.gitignore
+!README.md
