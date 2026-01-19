@@ -67,6 +67,21 @@ export interface API {
   defaultAuthId?: string;
 }
 
+export interface Resource {
+  id: string;
+  name: string;           // User-friendly name shown in MCP
+  uri: string;            // Resource URI (e.g., "docs://readme")
+  description?: string;   // Optional description
+  mimeType: string;       // Default: "text/markdown"
+  content: string;        // The actual markdown content
+}
+
+export interface Prompt {
+  name: string;           // Prompt identifier
+  description?: string;   // What this prompt does
+  content: string;        // The prompt text
+}
+
 export interface Project {
   id: string;
   name: string;
@@ -75,6 +90,8 @@ export interface Project {
   apis: API[];
   tools: Tool[];
   authSchemes: AuthScheme[];
+  resources: Resource[];
+  prompt?: Prompt;        // Single prompt (optional)
   
   createdAt: string;
   updatedAt: string;

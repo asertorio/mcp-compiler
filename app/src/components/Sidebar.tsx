@@ -1,4 +1,4 @@
-import { FolderOpen, Globe, Wrench, Shield, Download } from 'lucide-react';
+import { FolderOpen, Globe, Wrench, Shield, Download, Database, MessageSquare } from 'lucide-react';
 
 interface SidebarProps {
   activeSection: string;
@@ -10,6 +10,8 @@ export function Sidebar({ activeSection, onNavigate }: SidebarProps) {
     { id: 'project', label: 'Project', icon: FolderOpen },
     { id: 'apis', label: 'APIs', icon: Globe },
     { id: 'tools', label: 'Tools', icon: Wrench },
+    { id: 'resources', label: 'Resources', icon: Database },
+    { id: 'prompts', label: 'Prompts', icon: MessageSquare },
     { id: 'auth', label: 'Auth & Policies', icon: Shield },
     { id: 'export', label: 'Export', icon: Download },
   ];

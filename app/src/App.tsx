@@ -8,6 +8,8 @@ import { Sidebar } from "./components/Sidebar";
 import { useProjectStore } from "./store/projectStore";
 import { useAutosave } from "./hooks/useAutosave";
 import { ExportManager } from "./components/ExportManager";
+import { ResourcesManager } from "./components/ResourcesManager";
+import { PromptsManager } from "./components/PromptsManager";
 import { saveProjectToDisk, loadProjectFromDisk } from "./lib/project-service";
 
 function App() {
@@ -93,6 +95,10 @@ function App() {
         return <ApiManager />;
       case "tools":
         return <ToolsManager />;
+      case "resources":
+        return <ResourcesManager />;
+      case "prompts":
+        return <PromptsManager />;
       case "auth":
         return <AuthManager />;
       case "export":

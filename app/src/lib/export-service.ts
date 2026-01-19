@@ -1,5 +1,5 @@
 import JSZip from 'jszip';
-import { Project, Tool, AuthScheme } from '../types';
+import { Project, Tool, AuthScheme, Resource } from '../types';
 import { getCircularReplacer } from './project-service';
 
 export async function generateMCPProjectZip(project: Project): Promise<Blob> {
@@ -18,7 +18,39 @@ export async function generateMCPProjectZip(project: Project): Promise<Blob> {
     src.file('index.ts', generateServerCode(project));
   }
 
+  // Resources folder - save each resource as a separate file
+  if (project.resources && project.resources.length > 0) {
+    const resourcesFolder = zip.folder('resources');
+    if (resourcesFolder) {
+      project.resources.forEach(resource => {
+        // Generate filename from resource name
+        const filename = generateResourceFilename(resource);
+        resourcesFolder.file(filename, resource.content);
+      });
+    }
+  }
+
   return await zip.generateAsync({ type: 'blob' });
+}
+
+function generateResourceFilename(resource: Resource): string {
+  // Use the resource name to create a safe filename
+  const baseName = resource.name.toLowerCase().replace(/\s+/g, '-').replace(/[^a-z0-9-]/g, '');
+  
+  // Determine extension based on mimeType
+  const extMap: Record<string, string> = {
+    'text/markdown': '.md',
+    'text/plain': '.txt',
+    'application/json': '.json',
+    'text/html': '.html',
+    'text/css': '.css',
+    'text/javascript': '.js',
+    'application/xml': '.xml',
+    'text/xml': '.xml',
+  };
+  
+  const ext = extMap[resource.mimeType] || '.txt';
+  return `${baseName}${ext}`;
 }
 
 function generatePackageJson(project: Project): string {
@@ -325,11 +357,16 @@ import { StdioServerTransport } from "@modelcontextprotocol/sdk/server/stdio.js"
 import {
   CallToolRequestSchema,
   ListToolsRequestSchema,
+  ListResourcesRequestSchema,
+  ReadResourceRequestSchema,
+  ListPromptsRequestSchema,
+  GetPromptRequestSchema,
 } from "@modelcontextprotocol/sdk/types.js";
 import axios from "axios";
 import dotenv from "dotenv";
 import { fileURLToPath } from "url";
 import { dirname, join } from "path";
+import fs from "fs/promises";
 ${hasInteractive ? `import open from "open";
 import http from "http";
 import { URL } from "url";` : ''}
@@ -347,6 +384,8 @@ const server = new Server(
   {
     capabilities: {
       tools: {},
+      resources: {},
+      prompts: {},
     },
   }
 );
@@ -420,6 +459,91 @@ server.setRequestHandler(ListToolsRequestSchema, async () => {
   };
 });
 
+// Resource handlers
+server.setRequestHandler(ListResourcesRequestSchema, async () => {
+  return {
+    resources: [
+      ${project.resources.map(resource => `
+      {
+        uri: "${resource.uri}",
+        name: "${resource.name}",
+        description: ${JSON.stringify(resource.description || '')},
+        mimeType: "${resource.mimeType}"
+      }`).join(',')}
+    ]
+  };
+});
+
+server.setRequestHandler(ReadResourceRequestSchema, async (request) => {
+  const { uri } = request.params;
+  
+  // Map URIs to resource files in the resources folder
+  const resourceMap: Record<string, { filename: string; mimeType: string }> = {
+    ${project.resources.map(resource => {
+      const filename = generateResourceFilename(resource);
+      return `
+    "${resource.uri}": {
+      filename: "${filename}",
+      mimeType: "${resource.mimeType}"
+    }`;
+    }).join(',')}
+  };
+  
+  const resource = resourceMap[uri];
+  if (!resource) {
+    throw new Error(\`Resource not found: \${uri}\`);
+  }
+  
+  // Read the resource file from the resources folder
+  const resourcePath = join(__dirname, '..', 'resources', resource.filename);
+  const content = await fs.readFile(resourcePath, 'utf-8');
+  
+  return {
+    contents: [
+      {
+        uri,
+        mimeType: resource.mimeType,
+        text: content
+      }
+    ]
+  };
+});
+
+// Prompt handlers
+server.setRequestHandler(ListPromptsRequestSchema, async () => {
+  return {
+    prompts: [
+      ${project.prompt ? `
+      {
+        name: "${project.prompt.name}",
+        description: ${JSON.stringify(project.prompt.description || '')}
+      }` : ''}
+    ]
+  };
+});
+
+server.setRequestHandler(GetPromptRequestSchema, async (request) => {
+  const { name } = request.params;
+  
+  ${project.prompt ? `
+  if (name === "${project.prompt.name}") {
+    return {
+      messages: [
+        {
+          role: "user",
+          content: {
+            type: "text",
+            text: ${JSON.stringify(project.prompt.content)}
+          }
+        }
+      ]
+    };
+  }
+  ` : ''}
+  
+  throw new Error(\`Prompt not found: \${name}\`);
+});
+
 server.setRequestHandler(CallToolRequestSchema, async (request) => {
   const { name, arguments: args } = request.params;
 
@@ -437,8 +561,8 @@ server.setRequestHandler(CallToolRequestSchema, async (request) => {
       
       return `
   if (name === "login_${auth.name.toLowerCase().replace(/\s+/g, '_')}") {
-      const clientId = process.env.${prefix}_CLIENT_ID;
-      const clientSecret = process.env.${prefix}_CLIENT_SECRET;
+      const clientId = process.env['${prefix}_CLIENT_ID'];
+      const clientSecret = process.env['${prefix}_CLIENT_SECRET'];
       const authUrl = "${auth.config.authUrl}";
       const tokenUrl = "${auth.config.tokenUrl}";
       const redirectUri = "http://localhost:${callbackPort}/callback";
@@ -590,12 +714,12 @@ server.setRequestHandler(CallToolRequestSchema, async (request) => {
       if (auth) {
         if (auth.type === 'apiKey') {
           const envVar = `${auth.name.toUpperCase().replace(/\s+/g, '_')}_KEY`;
-          headersCode += `\n      const apiKey = process.env.${envVar};
+          headersCode += `\n      const apiKey = process.env['${envVar}'];
       if (!apiKey) throw new Error("Missing environment variable: ${envVar}");
       headers['${auth.config.headerName || 'Authorization'}'] = apiKey;`;
         } else if (auth.type === 'bearer') {
            const envVar = `${auth.name.toUpperCase().replace(/\s+/g, '_')}_TOKEN`;
-           headersCode += `\n      const token = process.env.${envVar};
+           headersCode += `\n      const token = process.env['${envVar}'];
       if (!token) throw new Error("Missing environment variable: ${envVar}");
       headers['Authorization'] = \`Bearer \${token}\`;`;
         } else if (auth.type === 'oauth2') {
@@ -606,7 +730,7 @@ server.setRequestHandler(CallToolRequestSchema, async (request) => {
       let token = globalTokens["${auth.id}"];
       if (!token) {
           // Fallback to env var if available
-          const envToken = process.env.${prefix}_ACCESS_TOKEN;
+          const envToken = process.env['${prefix}_ACCESS_TOKEN'];
           if (envToken) {
               token = envToken;
               console.error("Using ${prefix}_ACCESS_TOKEN from environment");
@@ -615,7 +739,7 @@ server.setRequestHandler(CallToolRequestSchema, async (request) => {
       if (!token) throw new Error("No token available. Please run the 'login_${auth.name.toLowerCase().replace(/\s+/g, '_')}' tool first, or set ${prefix}_ACCESS_TOKEN in your .env file.");
       headers['Authorization'] = \`Bearer \${token}\`;`;
            } else {
-               headersCode += `\n      const token = process.env.${prefix}_ACCESS_TOKEN;
+               headersCode += `\n      const token = process.env['${prefix}_ACCESS_TOKEN'];
       if (!token) throw new Error("Missing environment variable: ${prefix}_ACCESS_TOKEN. Please set this in your .env file.");
       headers['Authorization'] = \`Bearer \${token}\`;`;
            }
@@ -623,9 +747,9 @@ server.setRequestHandler(CallToolRequestSchema, async (request) => {
            authConfigCode = `{
         authId: "${auth.id}",
         tokenUrl: "${auth.config.tokenUrl || ''}",
-        refreshToken: process.env.${prefix}_REFRESH_TOKEN,
-        clientId: process.env.${prefix}_CLIENT_ID,
-        clientSecret: process.env.${prefix}_CLIENT_SECRET,
+        refreshToken: process.env['${prefix}_REFRESH_TOKEN'],
+        clientId: process.env['${prefix}_CLIENT_ID'],
+        clientSecret: process.env['${prefix}_CLIENT_SECRET'],
         tokenRequestFormat: "${auth.config.tokenRequestFormat || 'form'}",
         tokenAuthMethod: "${auth.config.tokenAuthMethod || 'body'}",
         additionalTokenParams: ${JSON.stringify(auth.config.additionalTokenParams || {})}
@@ -633,8 +757,8 @@ server.setRequestHandler(CallToolRequestSchema, async (request) => {
         } else if (auth.type === 'basic') {
            const userVar = `${auth.name.toUpperCase().replace(/\s+/g, '_')}_USERNAME`;
            const passVar = `${auth.name.toUpperCase().replace(/\s+/g, '_')}_PASSWORD`;
-           headersCode += `\n      const username = process.env.${userVar};
-      const password = process.env.${passVar};
+           headersCode += `\n      const username = process.env['${userVar}'];
+      const password = process.env['${passVar}'];
       if (!username || !password) throw new Error("Missing environment variables: ${userVar} or ${passVar}");
       const base64 = Buffer.from(\`\${username}:\${password}\`).toString('base64');
       headers['Authorization'] = \`Basic \${base64}\`;`;

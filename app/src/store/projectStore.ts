@@ -1,5 +1,5 @@
 import { create } from 'zustand';
-import { Project, API, Tool, AuthScheme } from '../types';
+import { Project, API, Tool, AuthScheme, Resource } from '../types';
 import { v4 as uuidv4 } from 'uuid';
 
 interface ProjectState {
@@ -27,6 +27,14 @@ interface ProjectState {
   addAuthScheme: (auth: Omit<AuthScheme, 'id'>) => void;
   updateAuthScheme: (id: string, updates: Partial<AuthScheme>) => void;
   deleteAuthScheme: (id: string) => void;
+  
+  // Resource Actions
+  addResource: (resource: Omit<Resource, 'id'>) => void;
+  updateResource: (id: string, updates: Partial<Resource>) => void;
+  deleteResource: (id: string) => void;
+  
+  // Prompt Actions
+  updatePrompt: (updates: Partial<Project['prompt']>) => void;
 }
 
 const createEmptyProject = (name: string): Project => ({
@@ -36,6 +44,8 @@ const createEmptyProject = (name: string): Project => ({
   apis: [],
   tools: [],
   authSchemes: [],
+  resources: [],
+  prompt: undefined,
   createdAt: new Date().toISOString(),
   updatedAt: new Date().toISOString(),
 });
@@ -152,6 +162,42 @@ export const useProjectStore = create<ProjectState>((set) => ({
         authSchemes: state.project.authSchemes.filter(auth => auth.id !== id),
         // Optional: clear authId from APIs/Tools that used this scheme?
         // For now, leaving it might be safer to avoid accidental data loss, or we can warn in UI.
+        updatedAt: new Date().toISOString()
+      }
+    }) : {}),
+
+  addResource: (resource) =>
+    set((state) => state.project ? ({
+      project: {
+        ...state.project,
+        resources: [...state.project.resources, { ...resource, id: uuidv4() }],
+        updatedAt: new Date().toISOString()
+      }
+    }) : {}),
+
+  updateResource: (id, updates) =>
+    set((state) => state.project ? ({
+      project: {
+        ...state.project,
+        resources: state.project.resources.map(resource => resource.id === id ? { ...resource, ...updates } : resource),
+        updatedAt: new Date().toISOString()
+      }
+    }) : {}),
+
+  deleteResource: (id) =>
+    set((state) => state.project ? ({
+      project: {
+        ...state.project,
+        resources: state.project.resources.filter(resource => resource.id !== id),
+        updatedAt: new Date().toISOString()
+      }
+    }) : {}),
+
+  updatePrompt: (updates) =>
+    set((state) => state.project ? ({
+      project: {
+        ...state.project,
+        prompt: state.project.prompt ? { ...state.project.prompt, ...updates } : updates as Project['prompt'],
         updatedAt: new Date().toISOString()
       }
     }) : {}),

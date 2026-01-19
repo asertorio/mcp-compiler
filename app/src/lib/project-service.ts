@@ -44,6 +44,24 @@ export async function loadProjectFromDisk(): Promise<{ project: Project; path: s
       try {
         const text = await file.text();
         const project = JSON.parse(text) as Project;
+        
+        // Ensure backwards compatibility - add missing fields from new version
+        project.resources = project.resources || [];
+        
+        // Migrate old prompts array to single prompt
+        if ('prompts' in project && Array.isArray((project as any).prompts)) {
+          const oldPrompts = (project as any).prompts;
+          if (oldPrompts.length > 0) {
+            // Take the first prompt and convert it
+            project.prompt = {
+              name: oldPrompts[0].name,
+              description: oldPrompts[0].description,
+              content: oldPrompts[0].content
+            };
+          }
+          delete (project as any).prompts;
+        }
+        
         // TODO: Add schema validation here
         resolve({ project, path: file.name });
       } catch (e) {
