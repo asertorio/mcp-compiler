@@ -1,6 +1,6 @@
 # MCP Builder
 
-A web-based visual tool for creating **MCP (Model Context Protocol) servers** from REST APIs. Build, configure, and export production-ready MCP servers that integrate with Claude and other AI assistants.
+A web-based visual tool for creating **MCP (Model Context Protocol) servers** from REST APIs. Build, configure, and export MCP servers that integrate with Claude and other AI assistants.
 
 ## 🎯 Features
 
@@ -94,7 +94,6 @@ mcp-compiler/
 │   ├── public/               # Static assets
 │   └── package.json
 ├── examples/            # Example projects and test cases
-├── export-templates/    # MCP server export templates
 ├── SPEC.md             # Project specification
 └── PLAN.md             # Development roadmap
 ```
