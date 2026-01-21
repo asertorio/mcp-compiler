@@ -2,6 +2,8 @@
 
 A web-based visual tool for creating **MCP (Model Context Protocol) servers** from REST APIs. Build, configure, and export MCP servers that integrate with Claude and other AI assistants.
 
+**IMPORTANT** Only generate MCPs from APIs and sources you trust, and always review the generated configuration before using it in production. This tool is still evolving, and feedback or issue reports are welcome.
+
 ## 🎯 Features
 
 - 🔌 **Multi-API Support** - Import and manage multiple REST APIs in a single project
@@ -13,6 +15,7 @@ A web-based visual tool for creating **MCP (Model Context Protocol) servers** fr
 - 💬 **Prompt Configuration** - Define custom system prompts for your MCP server
 - 📦 **One-Click Export** - Generate complete, ready-to-run MCP server projects
 - 🤖 **Claude-Ready** - Auto-generate configuration snippets for Claude Desktop
+- 🧩 **OpenAPI-Powered** – Convert OpenAPI 3 specs ino AI-ready MCPs
 
 ## 🚀 Quick Start
 
