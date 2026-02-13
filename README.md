@@ -22,7 +22,7 @@ A web-based visual tool for creating **MCP (Model Context Protocol) servers** fr
 ### Installation
 
 ```bash
-cd app
+cd docs
 npm install
 ```
 
@@ -63,7 +63,7 @@ npm run preview
 
 ```
 mcp-compiler/
-├── app/                  # Main web application (React + TypeScript)
+├── docs/                  # Main web application (React + TypeScript)
 │   ├── src/
 │   │   ├── components/       # React components
 │   │   │   ├── ApiManager.tsx         # API import and management
